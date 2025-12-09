@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Reactor Nuclear Técnico — Animado</title>
+
+<style>
+  :root{
+    --bg:#0b1220;
+    --panel:#0f1724;
+    --accent:#ffd166;
+    --dome:#9fb4c8;
+    --tower:#d9dbe2;
+    --steam:white;
+    --water:#1a87c9;
+    --pipe:#4a6fa3;
+  }
+
+  body{
+    margin:0;
+    background:var(--bg);
+    color:#e6eef8;
+    font-family: Inter, Arial, sans-serif;
+    padding:20px;
+  }
+
+  .container{
+    max-width:1200px;
+    margin:auto;
+    background:#101a2b;
+    padding:20px;
+    border-radius:14px;
+    box-shadow:0 0 20px rgba(0,0,0,0.5);
+  }
+
+  h1{
+    margin-top:0;
+    font-size:24px;
+    color:var(--accent);
+  }
+
+  #canvas-area{
+    position:relative;
+    width:100%;
+    height:600px;
+    background:#07101c;
+    border-radius:10px;
+    overflow:hidden;
+    margin-bottom:20px;
+  }
+
+  .particle{
+    position:absolute;
+    width:12px;
+    height:12px;
+    background:var(--steam);
+    border-radius:50%;
+    opacity:0.7;
+    filter:blur(2px);
+    animation:floatUp 3s linear infinite;
+  }
+
+  @keyframes floatUp{
+    0%{ transform: translateY(0) scale(1); opacity:0.7; }
+    70%{ opacity:0.4; }
+    100%{ transform: translateY(-180px) scale(1.6); opacity:0; }
+  }
+
+  .label{
+    position:absolute;
+    background:rgba(0,0,0,0.55);
+    padding:4px 8px;
+    border-radius:6px;
+    font-size:13px;
+    backdrop-filter:blur(4px);
+    border:1px solid rgba(255,255,255,0.1);
+  }
+
+  .section-title{
+    margin-top:20px;
+    font-size:18px;
+    font-weight:700;
+    color:#fff;
+  }
+
+  #intensityRange{
+    width:100%;
+    margin-top:10px;
+  }
+</style>
+</head>
+
+<body>
+<div class="container">
+  <h1>Reactor Nuclear — Versión Técnica con Animación Realista</h1>
+
+  <!-- CANVAS: Reactor + Partículas -->
+  <div id="canvas-area">
+
+    <!-- ====== DIBUJO PRINCIPAL (SVG) ====== -->
+    <svg id="reactor" viewBox="0 0 1200 600" width="100%" height="100%" style="position:absolute;top:0;left:0;">
+
+      <!-- Torres de enfriamiento -->
+      <ellipse cx="260" cy="360" rx="120" ry="180" fill="var(--tower)" stroke="#8c92a0" stroke-width="3"/>
+      <ellipse cx="460" cy="360" rx="120" ry="180" fill="var(--tower)" stroke="#8c92a0" stroke-width="3"/>
+
+      <!-- Edificio de contención -->
+      <ellipse cx="800" cy="350" rx="180" ry="220" fill="var(--dome)" stroke="#7a8aa0" stroke-width="4"/>
+
+      <!-- Núcleo del reactor -->
+      <circle cx="800" cy="380" r="60" fill="#ff4136" stroke="#ffe6e6" stroke-width="4"/>
+
+      <!-- Vasija del reactor -->
+      <circle cx="800" cy="380" r="90" fill="rgba(255,255,255,0.08)" stroke="#cfd8e6" stroke-width="3"/>
+
+      <!-- Generador de vapor -->
+      <rect x="940" y="260" width="160" height="150" rx="12" fill="#203040" stroke="#4a6788" stroke-width="3"/>
+
+      <!-- Sistema primario (tuberías rojas) -->
+      <path d="M830 350 C 900 330, 940 330, 960 330" stroke="#ff4747" stroke-width="14" fill="none"/>
+      <path d="M830 410 C 900 430, 940 430, 960 430" stroke="#ff4747" stroke-width="14" fill="none"/>
+
+      <!-- Sistema secundario (tuberías azules, vapor a turbina) -->
+      <path d="M1100 330 C1150 330,1180 350,1180 380 C1180 420,1150 440,1100 440"
+            stroke="#88caff" stroke-width="14" fill="none"/>
+
+      <!-- Turbina -->
+      <rect x="1080" y="360" width="120" height="100" rx="10" fill="#0f2a40" stroke="#4a6fa3" stroke-width="3"/>
+
+      <!-- Condensador -->
+      <rect x="1000" y="480" width="200" height="80" rx="12" fill="#0a2030" stroke="#88caff" stroke-width="3"/>
+
+      <!-- Circuito agua (torres) -->
+      <path d="M260 360 L260 520 L1100 520" stroke="#5bb0ff" stroke-width="12" fill="none"/>
+
+    </svg>
+
+    <!-- ====== ETIQUETAS ====== -->
+    <div class="label" style="top:40px; left:220px;">Torres de enfriamiento</div>
+    <div class="label" style="top:260px; left:760px;">Edificio de contención</div>
+    <div class="label" style="top:330px; left:770px;">Núcleo del reactor</div>
+    <div class="label" style="top:420px; left:740px;">Vasija del reactor</div>
+    <div class="label" style="top:220px; left:960px;">Generador de vapor</div>
+    <div class="label" style="top:360px; left:1080px;">Turbina</div>
+    <div class="label" style="top:470px; left:1040px;">Condensador</div>
+    <div class="label" style="top:540px; left:260px;">Circuito agua → torres</div>
+
+  </div>
+
+  <!-- ====== CONTROL DE INTENSIDAD ====== -->
+  <div class="section-title">Intensidad del vapor</div>
+  <input type="range" id="intensityRange" min="0" max="80" value="40">
+
+</div>
+
+<script>
+/* ================================
+   SISTEMA DE PARTÍCULAS (VAPOR)
+   ================================ */
+
+const area = document.getElementById("canvas-area");
+const slider = document.getElementById("intensityRange");
+
+let intensity = slider.value; // partículas por ciclo
+
+function spawnParticle(){
+  const p = document.createElement("div");
+  p.classList.add("particle");
+
+  const xBase = 260;  
+  const xSpread = 120;
+  const randomX = xBase + (Math.random()*xSpread - xSpread/2);
+
+  p.style.left = randomX + "px";
+  p.style.bottom = "360px";
+
+  p.style.animationDuration = (2.8 + Math.random()*1.8) + "s";
+
+  area.appendChild(p);
+
+  setTimeout(()=> p.remove(), 4000);
+}
+
+setInterval(()=>{
+  for(let i=0;i<intensity/10;i++){
+    spawnParticle();
+  }
+},200);
+
+slider.addEventListener("input", e=>{
+  intensity = Number(e.target.value);
+});
+</script>
+
+</body>
+</html>
